@@ -2378,34 +2378,18 @@
   const historyClear = document.getElementById('historyClear');
   let audio = null;
   let currentSong = null;
-  let musicGain = null;      // 音乐混音增益（路由进 AudioContext 后控制音量）
   let wasPlayingBeforeHide = false;
 
-  // ---------- 音乐后台播放 ----------
-  // 复用单个 audio 元素，并路由进 Web Audio 图（AudioContext 在后台标签页不被节流，
-  // 因此切走/最小化页面时音乐仍持续播放），同时接上系统媒体控制（MediaSession）。
-  function ensureMusicAudio() {
-    if (audio) return;
-    audio = new Audio();
-    audio.setAttribute('playsinline', '');
-    audio.preload = 'auto';
-    try {
-      if (audioCtx && audioCtx.state !== 'closed') {
-        const srcNode = audioCtx.createMediaElementSource(audio);
-        musicGain = audioCtx.createGain();
-        musicGain.gain.value = 1.0;
-        srcNode.connect(musicGain);
-        musicGain.connect(audioCtx.destination);
-      }
-    } catch (e) { musicGain = null; }
-    // 媒体会话：系统媒体栏 / 锁屏显示歌名并可控制
+  // ---------- 音乐播放（恢复 v8 直接播放方式，后台增强独立保留） ----------
+  // 每次 new Audio 直接输出（用户已验证可正常出声）；后台播放由浏览器原生
+  // audio 行为 + MediaSession 系统媒体控制 + 切回前台自动续播保证。
+  function setupBackgroundAudio() {
     if ('mediaSession' in navigator) {
       try {
-        navigator.mediaSession.setActionHandler('play', () => { audio.play(); });
-        navigator.mediaSession.setActionHandler('pause', () => { audio.pause(); });
+        navigator.mediaSession.setActionHandler('play', () => { if (audio) audio.play(); });
+        navigator.mediaSession.setActionHandler('pause', () => { if (audio) audio.pause(); });
       } catch (e) {}
     }
-    // 标签页切回前台时恢复播放（若切走前正在播放）
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         wasPlayingBeforeHide = audio && !audio.paused && !audio.ended;
@@ -2418,6 +2402,7 @@
       }
     });
   }
+  setupBackgroundAudio();
 
   function escapeHtml(str) {
     return String(str || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -2538,16 +2523,15 @@
     }
   }
   function playSong(song) {
-    ensureMusicAudio();
-    if (audio) { audio.pause(); audio.src = ''; }
+    if (audio) { audio.pause(); audio = null; }
     currentSong = song;
-    audio.src = song.url;
+    audio = new Audio(song.url);
+    audio.setAttribute('playsinline', '');
     npTitle.textContent = song.title;
     npArtist.textContent = song.author;
     nowPlaying.style.display = 'flex';
     playPause.textContent = '⏸';
     refreshFavBtn();
-    if (musicGain) musicGain.gain.value = 1.0;
     audio.play().catch(() => {
       npTitle.textContent = t('playFailed');
       npArtist.textContent = t('tryAnother');
