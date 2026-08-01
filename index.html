@@ -693,6 +693,7 @@
   const ROOF_BOARD_TEXTS = ['SHIBUYA', 'TOKYO', 'STYLE', 'SHIBUYA', '109', 'CROSS', 'CITY', 'LIVE'];
   const darkMat = new THREE.MeshStandardMaterial({ color: 0x181d26, roughness: 0.88, metalness: 0.05 });
   const darkMat2 = new THREE.MeshStandardMaterial({ color: 0x1f2530, roughness: 0.75, metalness: 0.2 });
+  const redEmissiveMat = new THREE.MeshStandardMaterial({ color: 0xff2020, emissive: 0xff0000, emissiveIntensity: 1.0 });
   const glassMat = new THREE.MeshStandardMaterial({ color: 0x0d1520, emissive: 0x14222f, emissiveIntensity: 0.7, roughness: 0.2, metalness: 0.5 });
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x3a4552, roughness: 0.45, metalness: 0.75 });
   const blackMat = new THREE.MeshStandardMaterial({ color: 0x11151c, roughness: 0.6, metalness: 0.5 });
@@ -790,6 +791,52 @@
       const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.2, 10), darkMat2);
       tank.position.set(0, h + 0.6, 0); g.add(tank);
     }
+    // 建模优化：屋顶太阳能板（一半概率）
+    if (Math.random() < 0.5) {
+      const panelMat = new THREE.MeshStandardMaterial({ color: 0x1a2535, roughness: 0.3, metalness: 0.6 });
+      for (let p = 0; p < 2 + (Math.random() * 2 | 0); p++) {
+        const panel = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.08, 0.8), panelMat);
+        panel.position.set(-w * 0.3 + p * 0.9, h + 0.22, 0.4);
+        panel.rotation.z = 0.35; // 略倾斜
+        g.add(panel);
+        // 太阳能板反光条
+        const glint = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.35),
+          new THREE.MeshBasicMaterial({ color: 0x9fc4ff, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+        glint.position.set(-w * 0.3 + p * 0.9, h + 0.3, 0.4);
+        glint.rotation.x = -0.35;
+        g.add(glint);
+      }
+    }
+    // 建模优化：屋顶设备间（空调机组）
+    if (Math.random() < 0.35) {
+      const unit = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.5, 0.8), new THREE.MeshStandardMaterial({ color: 0x3a4656, roughness: 0.6 }));
+      unit.position.set(w * 0.25, h + 0.26, -d * 0.25); g.add(unit);
+      const fan = new THREE.Mesh(new THREE.CircleGeometry(0.2, 8),
+        new THREE.MeshBasicMaterial({ color: 0x1a2028, transparent: true, opacity: 0.8 }));
+      fan.position.set(w * 0.25, h + 0.51, -d * 0.25 + 0.41); g.add(fan);
+    }
+    // 建模优化：墙面空调外机（每层随机挂）
+    for (let j = 1; j <= floors; j++) {
+      if (Math.random() < 0.4) {
+        const ac = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.5, 0.22),
+          new THREE.MeshStandardMaterial({ color: 0x4a5563, roughness: 0.5, metalness: 0.3 }));
+        ac.position.set(w * 0.42, j * 3 - 1.1, d / 2 + 0.14);
+        g.add(ac);
+        const acFan = new THREE.Mesh(new THREE.CircleGeometry(0.14, 8),
+          new THREE.MeshBasicMaterial({ color: 0x20262e }));
+        acFan.position.set(w * 0.42, j * 3 - 1.1, d / 2 + 0.25);
+        g.add(acFan);
+      }
+    }
+    // 建模优化：单元入口雨棚 + 门灯
+    if (Math.random() < 0.7) {
+      const awning = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.12, 0.9),
+        new THREE.MeshStandardMaterial({ color: 0x2c3a4a, roughness: 0.7 }));
+      awning.position.set(0, 2.3, d / 2 + 0.3); g.add(awning);
+      const doorGlow = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.5),
+        new THREE.MeshBasicMaterial({ color: 0xffe0b0, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }));
+      doorGlow.position.set(0, 1.9, d / 2 + 0.12); g.add(doorGlow);
+    }
     if (Math.random() < 0.5) {
       const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.4, 4), blackMat);
       ant.position.set(w * 0.3, h + 1.4, d * 0.3); g.add(ant);
@@ -847,6 +894,24 @@
     const win = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.4, 0.8),
       new THREE.MeshBasicMaterial({ color: 0xffc880, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
     win.position.set(0, h * 0.55, d / 2 + 0.08); g.add(win);
+    // 建模优化：烟囱 + 门廊灯 + 屋顶太阳能小灯
+    if (Math.random() < 0.6) {
+      const chim = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.9, 0.4), darkMat2);
+      chim.position.set(w * 0.3, h + 0.5, -d * 0.2); g.add(chim);
+    }
+    if (Math.random() < 0.6) {
+      const porch = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.1, 0.6),
+        new THREE.MeshStandardMaterial({ color: 0x2c3a4a }));
+      porch.position.set(0, 1.5, d / 2 + 0.25); g.add(porch);
+      const porchLight = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6),
+        new THREE.MeshBasicMaterial({ color: 0xffe0a0 }));
+      porchLight.position.set(0, 2.0, d / 2 + 0.25); g.add(porchLight);
+    }
+    if (Math.random() < 0.4) {
+      const roofEdge = new THREE.Mesh(new THREE.BoxGeometry(w * 1.06, 0.06, d * 1.06),
+        new THREE.MeshBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false }));
+      roofEdge.position.set(0, h + 0.3, 0); g.add(roofEdge);
+    }
     g.position.set(x, 0, z);
     g.rotation.y = rotY;
     scene.add(g);
@@ -881,6 +946,30 @@
     );
     blade.position.set(w * 0.42, 2.2, d / 2 + 0.6);
     g.add(blade);
+    // 建模优化：商店遮阳棚（条纹雨棚，凸出橱窗）
+    if (Math.random() < 0.75) {
+      const awning = new THREE.Mesh(new THREE.BoxGeometry(w * 0.8, 0.16, 1.0),
+        new THREE.MeshStandardMaterial({ color: [0x7a3b3b, 0x2f4a63, 0x4a5a3a, 0x6a4a6a][seed % 4], roughness: 0.8 }));
+      awning.position.set(0, 2.0, d / 2 + 0.55);
+      awning.rotation.x = 0.12;
+      g.add(awning);
+      // 遮阳棚下暖光
+      const awningGlow = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.75, 1.5),
+        new THREE.MeshBasicMaterial({ color: 0xffd9a0, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+      awningGlow.position.set(0, 1.4, d / 2 + 0.42);
+      g.add(awningGlow);
+    }
+    // 建模优化：门头灯带 + 侧墙霓虹竖条
+    const headBand = new THREE.Mesh(new THREE.BoxGeometry(w * 0.9, 0.12, 0.08),
+      new THREE.MeshBasicMaterial({ color: 0xffe8b0, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
+    headBand.position.set(0, 2.72, d / 2 + 0.08);
+    g.add(headBand);
+    if (Math.random() < 0.5) {
+      const sideNeon = new THREE.Mesh(new THREE.BoxGeometry(0.1, h * 0.7, 0.06),
+        new THREE.MeshBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }));
+      sideNeon.position.set(w * 0.46, h * 0.42, d / 2 - 0.3);
+      g.add(sideNeon);
+    }
     g.position.set(x + (Math.random() - 0.5) * 0.5, 0, z + (Math.random() - 0.5) * 0.5);
     g.rotation.y = faceDir > 0 ? -Math.PI / 2 : Math.PI / 2;
     scene.add(g);
@@ -962,6 +1051,47 @@
       const room = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.6, 1.6), darkMat2);
       room.position.set(x + 0.6, h + 2.6, z + 0.6);
       scene.add(room);
+    }
+    // 建模优化：高塔直升机停机坪圆环（反光警示）
+    if (h > 22 && Math.random() < 0.45) {
+      const padRing = new THREE.Mesh(new THREE.CircleGeometry(w * 0.42, 24),
+        new THREE.MeshStandardMaterial({ color: 0x263240, roughness: 0.35, metalness: 0.5 }));
+      padRing.rotation.x = -Math.PI / 2;
+      padRing.position.set(x, h + 2.85, z);
+      padRing.rotation.z = body.rotation.y;
+      scene.add(padRing);
+      const padEdge = new THREE.Mesh(new THREE.RingGeometry(w * 0.36, w * 0.42, 24),
+        new THREE.MeshBasicMaterial({ color: 0xff5533, transparent: true, opacity: 0.8, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
+      padEdge.rotation.x = -Math.PI / 2;
+      padEdge.position.set(x, h + 2.88, z);
+      padEdge.rotation.z = body.rotation.y;
+      scene.add(padEdge);
+      const padH = new THREE.Mesh(new THREE.RingGeometry(w * 0.12, w * 0.16, 24),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
+      padH.rotation.x = -Math.PI / 2;
+      padH.position.set(x, h + 2.89, z);
+      padH.rotation.z = body.rotation.y;
+      scene.add(padH);
+    }
+    // 建模优化：楼顶通讯天线塔（细长）
+    if (Math.random() < 0.3) {
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.06, 3.2, 5), poleMat);
+      mast.position.set(x - 0.6, h + 3.6, z - 0.6);
+      scene.add(mast);
+      const blinker = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6), redEmissiveMat);
+      blinker.position.set(x - 0.6, h + 5.3, z - 0.6);
+      scene.add(blinker);
+      roofLights.push({ mesh: blinker, phase: Math.random() * Math.PI * 2 });
+    }
+    // 建模优化：塔楼横向窗台灯带（低概率，顶部与中段各一条）
+    if (Math.random() < 0.5) {
+      const bandMat = new THREE.MeshBasicMaterial({ color: 0x88ccff, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false });
+      for (const by of [h * 0.3, h * 0.7]) {
+        const b2 = new THREE.Mesh(new THREE.BoxGeometry(w * 1.02, 0.12, d * 1.02), bandMat);
+        b2.position.set(x, by, z);
+        b2.rotation.y = body.rotation.y;
+        scene.add(b2);
+      }
     }
     if (Math.random() < 0.35) {
       const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.8, 4), poleMat);
@@ -1974,7 +2104,8 @@
   // ============================================================
   let audioCtx = null, rainGain = null, windGain = null, audioStarted = false;
   let __dropGain = null, __thunderGain = null, __thunderPlayer = null;
-  let windLfo = null;
+  let windLfo = null, windLfoGain = null, wlp = null, wband = null;
+  let snowGain = null, fogGain = null, fogLfo = null;
 
   function createNoiseBuffer(seconds, stereo) {
     const ch = stereo ? 2 : 1;
@@ -2084,9 +2215,9 @@
     // 风声（带 LFO 阵风调制）
     const wsrc = audioCtx.createBufferSource();
     wsrc.buffer = windBuf; wsrc.loop = true;
-    const wlp = audioCtx.createBiquadFilter();
+    wlp = audioCtx.createBiquadFilter();
     wlp.type = 'lowpass'; wlp.frequency.value = 380;
-    const wband = audioCtx.createBiquadFilter();
+    wband = audioCtx.createBiquadFilter();
     wband.type = 'bandpass'; wband.frequency.value = 700; wband.Q.value = 0.6;
     windGain = audioCtx.createGain(); windGain.gain.value = 0;
     wsrc.connect(wlp); wsrc.connect(wband);
@@ -2096,12 +2227,38 @@
     // 阵风 LFO：周期性增强风声
     windLfo = audioCtx.createOscillator();
     windLfo.frequency.value = 0.09;
-    const windLfoGain = audioCtx.createGain();
+    windLfoGain = audioCtx.createGain();
     windLfoGain.gain.value = 0.05;
     windLfo.connect(windLfoGain);
     windLfoGain.connect(windGain.gain);
     windLfo.start();
     wsrc.start();
+
+    // 雪声层（snow 天气）：超低频柔和"雪落"噪声，比风声更安静低沉
+    const ssrc = audioCtx.createBufferSource();
+    ssrc.buffer = noiseBuf; ssrc.loop = true; ssrc.playbackRate.value = 0.4;
+    const slp = audioCtx.createBiquadFilter();
+    slp.type = 'lowpass'; slp.frequency.value = 260;
+    snowGain = audioCtx.createGain(); snowGain.gain.value = 0;
+    ssrc.connect(slp); slp.connect(snowGain); snowGain.connect(audioCtx.destination);
+    ssrc.start();
+
+    // 雾号层（fog 天气）：两个极低频正弦差拍 → 远处雾气低鸣，LFO 缓慢起伏
+    const fogOscA = audioCtx.createOscillator();
+    fogOscA.type = 'sine'; fogOscA.frequency.value = 52;
+    const fogOscB = audioCtx.createOscillator();
+    fogOscB.type = 'sine'; fogOscB.frequency.value = 55.3;
+    const fogMix = audioCtx.createGain(); fogMix.gain.value = 0.5;
+    const fglp = audioCtx.createBiquadFilter();
+    fglp.type = 'lowpass'; fglp.frequency.value = 120;
+    fogGain = audioCtx.createGain(); fogGain.gain.value = 0;
+    fogOscA.connect(fogMix); fogOscB.connect(fogMix);
+    fogMix.connect(fglp); fglp.connect(fogGain); fogGain.connect(audioCtx.destination);
+    fogLfo = audioCtx.createOscillator();
+    fogLfo.type = 'sine'; fogLfo.frequency.value = 0.05;
+    const fogLfoGain = audioCtx.createGain(); fogLfoGain.gain.value = 0.03;
+    fogLfo.connect(fogLfoGain); fogLfoGain.connect(fogGain.gain);
+    fogOscA.start(); fogOscB.start(); fogLfo.start();
 
     // 雷声播放器（一次性触发）
     __thunderPlayer = {
@@ -2128,21 +2285,57 @@
     window.__dropGain = __dropGain;
     window.__thunderGain = __thunderGain;
   }
+  // ---------- 天气专属音效配置 ----------
+  // 每种天气独立设定各音层目标音量 + 风声滤波音调 + 雷声频率等级
+  const WEATHER_AUDIO = {
+    clear:   { rain: 0.00, drop: 0.00, wind: 0.06, snow: 0.00, fog: 0.00, wlp: 300, wband: 520,  thunder: 0 },
+    drizzle: { rain: 0.30, drop: 0.07, wind: 0.16, snow: 0.00, fog: 0.00, wlp: 340, wband: 700,  thunder: 0 },
+    light:   { rain: 0.42, drop: 0.15, wind: 0.20, snow: 0.00, fog: 0.00, wlp: 360, wband: 760,  thunder: 0 },
+    rain:    { rain: 1.00, drop: 0.55, wind: 0.45, snow: 0.00, fog: 0.00, wlp: 380, wband: 850,  thunder: 0 },
+    storm:   { rain: 1.40, drop: 0.75, wind: 1.00, snow: 0.00, fog: 0.00, wlp: 500, wband: 1050, thunder: 1 },
+    thunder: { rain: 1.60, drop: 0.90, wind: 1.30, snow: 0.00, fog: 0.00, wlp: 600, wband: 1150, thunder: 2 },
+    snow:    { rain: 0.00, drop: 0.00, wind: 0.22, snow: 0.60, fog: 0.00, wlp: 250, wband: 400,  thunder: 0 },
+    fog:     { rain: 0.05, drop: 0.00, wind: 0.12, snow: 0.00, fog: 0.80, wlp: 200, wband: 350,  thunder: 0 },
+    typhoon: { rain: 1.80, drop: 0.95, wind: 2.40, snow: 0.00, fog: 0.00, wlp: 700, wband: 1350, thunder: 3 },
+  };
+  function applyWeatherAudio(mode, immediate) {
+    if (!audioCtx) return;
+    const a = WEATHER_AUDIO[mode] || WEATHER_AUDIO.rain;
+    const t0 = audioCtx.currentTime;
+    const dur = immediate ? 0.05 : 0.6;
+    if (rainGain) rainGain.gain.linearRampToValueAtTime(0.03 + a.rain * 0.20, t0 + dur);
+    if (windGain) windGain.gain.linearRampToValueAtTime(0.02 + a.wind * 0.22, t0 + dur);
+    if (__dropGain) __dropGain.gain.linearRampToValueAtTime(a.drop * 0.40, t0 + dur);
+    if (snowGain) snowGain.gain.linearRampToValueAtTime(a.snow * 0.12, t0 + dur);
+    if (fogGain) fogGain.gain.linearRampToValueAtTime(a.fog * 0.10, t0 + dur);
+    // 风声音调随天气变化（台风尖锐呼啸 / 晴日轻柔）
+    if (wlp) wlp.frequency.linearRampToValueAtTime(a.wlp, t0 + dur);
+    if (wband) wband.frequency.linearRampToValueAtTime(a.wband, t0 + dur);
+    if (windLfo) windLfo.frequency.linearRampToValueAtTime(a.wind > 1.2 ? 0.16 : 0.09, t0 + dur);
+    if (windLfoGain) windLfoGain.gain.linearRampToValueAtTime(a.wind > 1.2 ? 0.12 : 0.05, t0 + dur);
+    // 雷声频率等级（1=雷雨 2=雷暴 3=台风）
+    if (__thunderPlayer) {
+      if (a.thunder > 0) {
+        __thunderPlayer.nextIn = (a.thunder === 1 ? 5 : a.thunder === 2 ? 3 : 2) + Math.random() * (a.thunder === 1 ? 6 : a.thunder === 2 ? 5 : 4);
+      }
+    }
+  }
   function scheduleWeatherBreath() {
     setTimeout(() => {
       if (audioCtx && rainGain && windGain) {
+        const a = WEATHER_AUDIO[weatherMode] || WEATHER_AUDIO.rain;
         const t0 = audioCtx.currentTime;
         const gust = 0.7 + Math.random() * 0.6;
-        rainGain.gain.linearRampToValueAtTime((0.03 + rainLevel * 0.24) * gust, t0 + 0.8 + Math.random() * 1.2);
-        windGain.gain.linearRampToValueAtTime((0.04 + rainLevel * 0.26) * gust, t0 + 0.8 + Math.random() * 1.2);
-        if (__dropGain) __dropGain.gain.linearRampToValueAtTime((0.02 + rainLevel * 0.2) * gust, t0 + 0.8);
-        if (__thunderGain) __thunderGain.gain.linearRampToValueAtTime((0.01 + rainLevel * 0.07) * gust, t0 + 0.8);
-        // 随机雷声（storm 及以上）
-        if (__thunderPlayer && weatherMode !== 'light' && weatherMode !== 'rain') {
+        rainGain.gain.linearRampToValueAtTime((0.03 + a.rain * 0.20) * gust, t0 + 0.8 + Math.random() * 1.2);
+        windGain.gain.linearRampToValueAtTime((0.02 + a.wind * 0.22) * gust, t0 + 0.8 + Math.random() * 1.2);
+        if (__dropGain) __dropGain.gain.linearRampToValueAtTime(a.drop * 0.40 * gust, t0 + 0.8);
+        if (snowGain) snowGain.gain.linearRampToValueAtTime(a.snow * 0.12 * gust, t0 + 0.8);
+        if (fogGain) fogGain.gain.linearRampToValueAtTime(a.fog * 0.10 * gust, t0 + 0.8);
+        // 随机雷声（仅 storm/thunder/typhoon）
+        if (__thunderPlayer && (weatherMode === 'storm' || weatherMode === 'thunder' || weatherMode === 'typhoon')) {
           const now = audioCtx.currentTime;
           if (now - __thunderPlayer.lastPlay > __thunderPlayer.nextIn) {
             __thunderPlayer.lastPlay = now;
-            __thunderPlayer.nextIn = (weatherMode === 'thunder' ? 4 : 2.5) + Math.random() * (weatherMode === 'thunder' ? 7 : 5);
             __thunderPlayer.play(Math.random() * 0.5);
           }
         }
@@ -2152,13 +2345,7 @@
   }
   scheduleWeatherBreath();
   function updateRainAudio(level, immediate) {
-    if (!audioCtx) return;
-    const t0 = audioCtx.currentTime;
-    const dur = immediate ? 0.05 : 0.5;
-    if (rainGain) rainGain.gain.linearRampToValueAtTime(0.03 + level * 0.24, t0 + dur);
-    if (windGain) windGain.gain.linearRampToValueAtTime(0.04 + level * 0.26, t0 + dur);
-    if (__dropGain) __dropGain.gain.linearRampToValueAtTime(0.02 + level * 0.2, t0 + dur);
-    if (__thunderGain) __thunderGain.gain.linearRampToValueAtTime(0.01 + level * 0.07, t0 + dur);
+    applyWeatherAudio(weatherMode, immediate);
   }
   function bootAudio() {
     if (audioStarted) return;
@@ -2191,6 +2378,46 @@
   const historyClear = document.getElementById('historyClear');
   let audio = null;
   let currentSong = null;
+  let musicGain = null;      // 音乐混音增益（路由进 AudioContext 后控制音量）
+  let wasPlayingBeforeHide = false;
+
+  // ---------- 音乐后台播放 ----------
+  // 复用单个 audio 元素，并路由进 Web Audio 图（AudioContext 在后台标签页不被节流，
+  // 因此切走/最小化页面时音乐仍持续播放），同时接上系统媒体控制（MediaSession）。
+  function ensureMusicAudio() {
+    if (audio) return;
+    audio = new Audio();
+    audio.setAttribute('playsinline', '');
+    audio.preload = 'auto';
+    try {
+      if (audioCtx && audioCtx.state !== 'closed') {
+        const srcNode = audioCtx.createMediaElementSource(audio);
+        musicGain = audioCtx.createGain();
+        musicGain.gain.value = 1.0;
+        srcNode.connect(musicGain);
+        musicGain.connect(audioCtx.destination);
+      }
+    } catch (e) { musicGain = null; }
+    // 媒体会话：系统媒体栏 / 锁屏显示歌名并可控制
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.setActionHandler('play', () => { audio.play(); });
+        navigator.mediaSession.setActionHandler('pause', () => { audio.pause(); });
+      } catch (e) {}
+    }
+    // 标签页切回前台时恢复播放（若切走前正在播放）
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        wasPlayingBeforeHide = audio && !audio.paused && !audio.ended;
+      } else {
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        if (wasPlayingBeforeHide && audio) {
+          audio.play().catch(() => {});
+        }
+        wasPlayingBeforeHide = false;
+      }
+    });
+  }
 
   function escapeHtml(str) {
     return String(str || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -2311,18 +2538,30 @@
     }
   }
   function playSong(song) {
-    if (audio) { audio.pause(); audio = null; }
+    ensureMusicAudio();
+    if (audio) { audio.pause(); audio.src = ''; }
     currentSong = song;
-    audio = new Audio(song.url);
+    audio.src = song.url;
     npTitle.textContent = song.title;
     npArtist.textContent = song.author;
     nowPlaying.style.display = 'flex';
     playPause.textContent = '⏸';
     refreshFavBtn();
+    if (musicGain) musicGain.gain.value = 1.0;
     audio.play().catch(() => {
       npTitle.textContent = t('playFailed');
       npArtist.textContent = t('tryAnother');
     });
+    // 系统媒体控制信息
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: song.title,
+          artist: song.author,
+          album: 'EmoCity · Neo-Shibuya',
+        });
+      } catch (e) {}
+    }
     audio.addEventListener('ended', () => { playPause.textContent = '▶'; });
     audio.addEventListener('error', () => {
       npTitle.textContent = t('playFailed');
